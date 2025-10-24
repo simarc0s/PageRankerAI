@@ -57,7 +57,33 @@ def transition_model(corpus, page, damping_factor):
     linked to by `page`. With probability `1 - damping_factor`, choose
     a link at random chosen from all pages in the corpus.
     """
-    raise NotImplementedError
+    # Number of pages in the corpus
+    N = len(corpus)
+
+    # If the page has no outgoing links (dangling), treat as linking to all pages uniformly
+    links = corpus.get(page, set())
+    if not links:
+        return {p: 1 / N for p in corpus}
+
+    # Base probability for jumping to any page
+    base = (1 - damping_factor) / N
+
+    # Probability mass distributed among linked pages
+    linked_share = damping_factor / len(links)
+
+    distribution = {}
+    for p in corpus:
+        distribution[p] = base
+        if p in links:
+            distribution[p] += linked_share
+
+    # Optional normalization to guard against floating point drift
+    total = sum(distribution.values())
+    if total != 0:
+        for p in distribution:
+            distribution[p] /= total
+
+    return distribution
 
 
 def sample_pagerank(corpus, damping_factor, n):
