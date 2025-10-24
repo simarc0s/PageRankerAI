@@ -77,12 +77,6 @@ def transition_model(corpus, page, damping_factor):
         if p in links:
             distribution[p] += linked_share
 
-    # Optional normalization to guard against floating point drift
-    total = sum(distribution.values())
-    if total != 0:
-        for p in distribution:
-            distribution[p] /= total
-
     return distribution
 
 
@@ -95,7 +89,29 @@ def sample_pagerank(corpus, damping_factor, n):
     their estimated PageRank value (a value between 0 and 1). All
     PageRank values should sum to 1.
     """
-    raise NotImplementedError
+    # Initialize counts for each page
+    counts = {p: 0 for p in corpus}
+
+    # Start from a random page
+    current = random.choice(list(corpus.keys()))
+
+    # Perform n samples
+    for _ in range(n):
+        # Count visit to current page
+        counts[current] += 1
+
+        # Get transition probabilities from current page
+        dist = transition_model(corpus, current, damping_factor)
+
+        # Sample next page according to distribution
+        pages = list(dist.keys())
+        weights = list(dist.values())
+        current = random.choices(pages, weights=weights, k=1)[0]
+
+    # Convert counts to probabilities (normalize by n)
+    ranks = {p: counts[p] / n for p in counts}
+
+    return ranks
 
 
 def iterate_pagerank(corpus, damping_factor):
