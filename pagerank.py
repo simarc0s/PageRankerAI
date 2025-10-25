@@ -15,6 +15,7 @@ def main():
     )
     parser.add_argument("corpus", help="Directory containing the corpus HTML files")
     parser.add_argument("--csv", dest="csv", help="Output CSV file to save ranks (page,sampling_rank,iterate_rank)")
+    parser.add_argument("--compare", action="store_true", help="Compare Sampling vs Iteration ranks and show differences")
     args = parser.parse_args()
 
     corpus = crawl(args.corpus)
@@ -41,6 +42,34 @@ def main():
             print(f"Ranks written to CSV: {args.csv}")
         except OSError as e:
             sys.exit(f"Error writing CSV file: {e}")
+
+    # Optional comparison view
+    if args.compare:
+        print("\nComparison: Sampling vs Iteration")
+        rows = []
+        for page in corpus.keys():
+            s = sampling_ranks.get(page, 0.0)
+            it = iterate_ranks.get(page, 0.0)
+            diff = abs(s - it)
+            rows.append((page, s, it, diff))
+
+        # Sort by absolute difference descending
+        rows.sort(key=lambda r: r[3], reverse=True)
+
+        # Determine column widths
+        page_w = max([len("page")] + [len(r[0]) for r in rows])
+        header = f"{ 'page'.ljust(page_w) }  {'sampling':>10}  {'iterate':>10}  {'abs_diff':>10}"
+        print(header)
+        print("-" * len(header))
+        for page, s, it, d in rows:
+            print(f"{page.ljust(page_w)}  {s:>10.6f}  {it:>10.6f}  {d:>10.6f}")
+
+        # Summary stats
+        if rows:
+            diffs = [r[3] for r in rows]
+            max_diff = max(diffs)
+            mean_diff = sum(diffs) / len(diffs)
+            print(f"\nSummary: max_diff = {max_diff:.6f}, mean_diff = {mean_diff:.6f}")
 
 
 def crawl(directory):
