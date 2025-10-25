@@ -123,7 +123,49 @@ def iterate_pagerank(corpus, damping_factor):
     their estimated PageRank value (a value between 0 and 1). All
     PageRank values should sum to 1.
     """
-    raise NotImplementedError
+    N = len(corpus)
+    pages = list(corpus.keys())
+
+    # Initialize ranks uniformly
+    ranks = {p: 1 / N for p in pages}
+
+    # Precompute incoming links for efficiency
+    incoming = {p: set() for p in pages}
+    for src, outs in corpus.items():
+        for dst in outs:
+            if dst in incoming:
+                incoming[dst].add(src)
+
+    # Iterate until convergence
+    changed = True
+    while changed:
+        new_ranks = {}
+
+        # Total rank from dangling pages (no outgoing links)
+        dangling_sum = sum(ranks[p] for p in pages if len(corpus[p]) == 0)
+
+        for p in pages:
+            # Base teleportation component
+            pr = (1 - damping_factor) / N
+
+            # Contribution from dangling pages distributed uniformly
+            pr += damping_factor * (dangling_sum / N)
+
+            # Contributions from pages that link to p
+            link_sum = 0.0
+            for q in incoming[p]:
+                Lq = len(corpus[q]) if len(corpus[q]) > 0 else N
+                link_sum += ranks[q] / Lq
+            pr += damping_factor * link_sum
+
+            new_ranks[p] = pr
+
+        # Check convergence: max absolute difference < 0.001
+        diff = max(abs(new_ranks[p] - ranks[p]) for p in pages)
+        changed = diff >= 0.001
+        ranks = new_ranks
+
+    return ranks
 
 
 if __name__ == "__main__":
