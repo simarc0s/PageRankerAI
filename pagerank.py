@@ -13,9 +13,20 @@ def main():
     parser = argparse.ArgumentParser(
         description="Compute PageRank for a corpus of HTML files."
     )
-    parser.add_argument("corpus", help="Directory containing the corpus HTML files")
-    parser.add_argument("--csv", dest="csv", help="Output CSV file to save ranks (page,sampling_rank,iterate_rank)")
-    parser.add_argument("--compare", action="store_true", help="Compare Sampling vs Iteration ranks and show differences")
+    parser.add_argument(
+        "corpus",
+        help="Directory containing the corpus HTML files",
+    )
+    parser.add_argument(
+        "--csv",
+        dest="csv",
+        help="Output CSV file to save ranks (page,sampling_rank,iterate_rank)",
+    )
+    parser.add_argument(
+        "--compare",
+        action="store_true",
+        help="Compare Sampling vs Iteration ranks and show differences",
+    )
     parser.add_argument(
         "--diff-threshold",
         dest="diff_threshold",
@@ -77,8 +88,17 @@ def main():
 
         # Determine column widths
         page_w = max([len("page")] + [len(r[0]) for r in rows])
-        header_note = f" (threshold: {threshold:.6f}; shown {len(rows)}/{total_rows})" if threshold > 0.0 else ""
-        header = f"{ 'page'.ljust(page_w) }  {'sampling':>10}  {'iterate':>10}  {'abs_diff':>10}{header_note}"
+        header_note = (
+            f" (threshold: {threshold:.6f}; shown {len(rows)}/{total_rows})"
+            if threshold > 0.0
+            else ""
+        )
+        header = (
+            f"{'page'.ljust(page_w)}  "
+            f"{'sampling':>10}  "
+            f"{'iterate':>10}  "
+            f"{'abs_diff':>10}{header_note}"
+        )
         print(header)
         print("-" * len(header))
         if rows:
