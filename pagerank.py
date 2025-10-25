@@ -16,6 +16,13 @@ def main():
     parser.add_argument("corpus", help="Directory containing the corpus HTML files")
     parser.add_argument("--csv", dest="csv", help="Output CSV file to save ranks (page,sampling_rank,iterate_rank)")
     parser.add_argument("--compare", action="store_true", help="Compare Sampling vs Iteration ranks and show differences")
+    parser.add_argument(
+        "--diff-threshold",
+        dest="diff_threshold",
+        type=float,
+        default=0.0,
+        help="When using --compare, only show pages with abs(sampling-iterate) >= threshold (default: 0.0)",
+    )
     args = parser.parse_args()
 
     corpus = crawl(args.corpus)
@@ -53,20 +60,31 @@ def main():
             diff = abs(s - it)
             rows.append((page, s, it, diff))
 
+        total_rows = len(rows)
+
+        # Apply optional threshold filter
+        threshold = args.diff_threshold if args.diff_threshold is not None else 0.0
+        if threshold > 0.0:
+            rows = [r for r in rows if r[3] >= threshold]
+
         # Sort by absolute difference descending
         rows.sort(key=lambda r: r[3], reverse=True)
 
         # Determine column widths
         page_w = max([len("page")] + [len(r[0]) for r in rows])
-        header = f"{ 'page'.ljust(page_w) }  {'sampling':>10}  {'iterate':>10}  {'abs_diff':>10}"
+        header_note = f" (threshold: {threshold:.6f}; shown {len(rows)}/{total_rows})" if threshold > 0.0 else ""
+        header = f"{ 'page'.ljust(page_w) }  {'sampling':>10}  {'iterate':>10}  {'abs_diff':>10}{header_note}"
         print(header)
         print("-" * len(header))
-        for page, s, it, d in rows:
-            print(f"{page.ljust(page_w)}  {s:>10.6f}  {it:>10.6f}  {d:>10.6f}")
+        if rows:
+            for page, s, it, d in rows:
+                print(f"{page.ljust(page_w)}  {s:>10.6f}  {it:>10.6f}  {d:>10.6f}")
+        else:
+            print("(no pages meet the threshold)")
 
         # Summary stats
-        if rows:
-            diffs = [r[3] for r in rows]
+        if total_rows:
+            diffs = [r[3] for r in rows] if rows else [0.0]
             max_diff = max(diffs)
             mean_diff = sum(diffs) / len(diffs)
             print(f"\nSummary: max_diff = {max_diff:.6f}, mean_diff = {mean_diff:.6f}")
