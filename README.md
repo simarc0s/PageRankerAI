@@ -6,9 +6,7 @@ Este projeto implementa o algoritmo PageRank sobre pequenos conjuntos (corpora) 
 O projeto inclui funcionalidades extra que facilitam análise e apresentação de resultados:
 1. Destaque simples: exportação para CSV (`--csv`)
 2. Comparação regular: tabela de diferenças entre amostragem e iteração (`--compare`, `--diff-threshold`)
-3. (Branch de feature) PageRank Personalizado: teleporte enviesado por tópico (`--topic-prefix`)
-
-> Nota: na branch `main` estão a exportação CSV e a comparação. A feature "Personalized" encontra-se na branch `feature/personalized_pagerank` e tem documentação própria em `FEATURE_personalized.md`.
+3. PageRank Personalizado: teleporte enviesado por tópico (`--topic-prefix`)
 
 ## Descrição
 O PageRank atribui a cada página uma probabilidade de estar a ser visitada por um "surfer" de links. Existem dois métodos implementados:
@@ -47,21 +45,19 @@ python pagerank.py corpus2 --compare
 python pagerank.py corpus2 --compare --diff-threshold 0.002
 ```
 
-### (Opcional) PageRank Personalizado (branch de feature)
+### PageRank Personalizado
 Para usar o teleporte enviesado por tópico:
 ```powershell
-# Mudar para a branch com a feature
-git checkout feature/personalized_pagerank
-
 # Exemplo: favorecer páginas cujo nome contenha "search"
 python pagerank.py corpus1 --topic-prefix search
 ```
 Consulte `FEATURE_personalized.md` para detalhes, fórmulas e exemplos adicionais.
 
-## Flags principais (branch main)
+## Flags principais
 - `--csv <ficheiro>`: exporta resultados base (amostragem e iteração)
 - `--compare`: imprime tabela com diferenças entre métodos
 - `--diff-threshold <float>`: quando usado com `--compare`, filtra por diferença mínima
+- `--topic-prefix <lista>`: teleporte enviesado por substrings (separadas por vírgulas) no nome das páginas
 
 ## Estrutura do projeto
 ```
