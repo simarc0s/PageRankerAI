@@ -23,6 +23,11 @@ def main():
         default=0.0,
         help="When using --compare, only show pages with abs(sampling-iterate) >= threshold (default: 0.0)",
     )
+    parser.add_argument(
+        "--topic-prefix",
+        dest="topic_prefix",
+        help="Comma-separated prefixes to build a personalized teleport vector (case-insensitive)",
+    )
     args = parser.parse_args()
 
     corpus = crawl(args.corpus)
@@ -88,6 +93,32 @@ def main():
             max_diff = max(diffs)
             mean_diff = sum(diffs) / len(diffs)
             print(f"\nSummary: max_diff = {max_diff:.6f}, mean_diff = {mean_diff:.6f}")
+
+    # Optional: Personalized PageRank using topic-biased teleport
+    if args.topic_prefix:
+        raw = [p.strip().lower() for p in args.topic_prefix.split(",") if p.strip()]
+        # Build teleport vector t: weight 1 if page name contains any prefix, else 0
+        t = {p: 0.0 for p in corpus}
+        for p in corpus:
+            pl = p.lower()
+            if any(pref in pl for pref in raw):
+                t[p] = 1.0
+        total = sum(t.values())
+        if total <= 0:
+            # Fallback to uniform if no matches
+            n = len(corpus)
+            t = {p: 1.0 / n for p in corpus}
+            note = "(nenhuma página correspondeu; teleporte uniforme)"
+        else:
+            # Normalize to sum to 1
+            t = {p: v / total for p, v in t.items()}
+            note = ""
+
+        personalized = iterate_pagerank(corpus, DAMPING, teleport=t)
+        label = f"Personalized PageRank (prefixos: {args.topic_prefix})"
+        print(label, note)
+        for page in sorted(personalized):
+            print(f"  {page}: {personalized[page]:.4f}")
 
 
 def crawl(directory):
@@ -183,7 +214,7 @@ def sample_pagerank(corpus, damping_factor, n):
     return ranks
 
 
-def iterate_pagerank(corpus, damping_factor):
+def iterate_pagerank(corpus, damping_factor, teleport=None):
     """
     Return PageRank values for each page by iteratively updating
     PageRank values until convergence.
@@ -213,21 +244,48 @@ def iterate_pagerank(corpus, damping_factor):
         # Total rank from dangling pages (no outgoing links)
         dangling_sum = sum(ranks[p] for p in pages if len(corpus[p]) == 0)
 
-        for p in pages:
-            # Base teleportation component
-            pr = (1 - damping_factor) / N
+        if teleport is None:
+            # Classic uniform teleportation
+            for p in pages:
+                # Base teleportation component
+                pr = (1 - damping_factor) / N
 
-            # Contribution from dangling pages distributed uniformly
-            pr += damping_factor * (dangling_sum / N)
+                # Contribution from dangling pages distributed uniformly
+                pr += damping_factor * (dangling_sum / N)
 
-            # Contributions from pages that link to p
-            link_sum = 0.0
-            for q in incoming[p]:
-                Lq = len(corpus[q]) if len(corpus[q]) > 0 else N
-                link_sum += ranks[q] / Lq
-            pr += damping_factor * link_sum
+                # Contributions from pages that link to p
+                link_sum = 0.0
+                for q in incoming[p]:
+                    Lq = len(corpus[q]) if len(corpus[q]) > 0 else N
+                    link_sum += ranks[q] / Lq
+                pr += damping_factor * link_sum
 
-            new_ranks[p] = pr
+                new_ranks[p] = pr
+        else:
+            # Personalized teleport vector (must sum to 1 across pages)
+            # Ensure teleport has entries for all pages and is normalized
+            total_t = sum(teleport.get(p, 0.0) for p in pages)
+            if total_t <= 0:
+                total_t = 1.0
+                t = {p: 1.0 / N for p in pages}
+            else:
+                t = {p: teleport.get(p, 0.0) / total_t for p in pages}
+
+            for p in pages:
+                # Base teleportation component according to t
+                pr = (1 - damping_factor) * t[p]
+
+                # Contribution from dangling pages distributed according to t
+                pr += damping_factor * dangling_sum * t[p]
+
+                # Contributions from pages that link to p
+                link_sum = 0.0
+                for q in incoming[p]:
+                    Lq = len(corpus[q]) if len(corpus[q]) > 0 else N
+                    link_sum += ranks[q] / Lq
+                pr += damping_factor * link_sum
+
+                new_ranks[p] = pr
 
         # Check convergence: max absolute difference < 0.001
         diff = max(abs(new_ranks[p] - ranks[p]) for p in pages)
