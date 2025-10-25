@@ -1,3 +1,5 @@
+import argparse
+import csv
 import os
 import random
 import re
@@ -8,17 +10,37 @@ SAMPLES = 10000
 
 
 def main():
-    if len(sys.argv) != 2:
-        sys.exit("Usage: python pagerank.py corpus")
-    corpus = crawl(sys.argv[1])
-    ranks = sample_pagerank(corpus, DAMPING, SAMPLES)
+    parser = argparse.ArgumentParser(
+        description="Compute PageRank for a corpus of HTML files."
+    )
+    parser.add_argument("corpus", help="Directory containing the corpus HTML files")
+    parser.add_argument("--csv", dest="csv", help="Output CSV file to save ranks (page,sampling_rank,iterate_rank)")
+    args = parser.parse_args()
+
+    corpus = crawl(args.corpus)
+
+    sampling_ranks = sample_pagerank(corpus, DAMPING, SAMPLES)
     print(f"PageRank Results from Sampling (n = {SAMPLES})")
-    for page in sorted(ranks):
-        print(f"  {page}: {ranks[page]:.4f}")
-    ranks = iterate_pagerank(corpus, DAMPING)
+    for page in sorted(sampling_ranks):
+        print(f"  {page}: {sampling_ranks[page]:.4f}")
+
+    iterate_ranks = iterate_pagerank(corpus, DAMPING)
     print(f"PageRank Results from Iteration")
-    for page in sorted(ranks):
-        print(f"  {page}: {ranks[page]:.4f}")
+    for page in sorted(iterate_ranks):
+        print(f"  {page}: {iterate_ranks[page]:.4f}")
+
+    if args.csv:
+        try:
+            with open(args.csv, "w", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f)
+                writer.writerow(["page", "sampling_rank", "iterate_rank"])
+                for page in sorted(corpus.keys()):
+                    s = sampling_ranks.get(page, 0.0)
+                    it = iterate_ranks.get(page, 0.0)
+                    writer.writerow([page, f"{s:.6f}", f"{it:.6f}"])
+            print(f"Ranks written to CSV: {args.csv}")
+        except OSError as e:
+            sys.exit(f"Error writing CSV file: {e}")
 
 
 def crawl(directory):
