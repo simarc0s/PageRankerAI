@@ -154,6 +154,9 @@ git commit -m "feat(compare): imprimir tabela e resumo de diferenças"
 ## Autores
 **Simão Marcos**, **Abel Dias**
 
+## Agradecimentos
+**Ricardo Guilherme**, so long and goodbye.
+
 Projeto académico desenvolvido com assistência de GitHub Copilot como ferramenta de pair programming.
 
 ## Licença
